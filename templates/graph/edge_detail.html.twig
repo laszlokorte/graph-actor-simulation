@@ -1,0 +1,71 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+	<section style="display: flex;">
+		<svg viewBox="0 0 1000 1000" width="500" height="700">
+			{% for i, node in nodes %}
+				<a href="{{ path('graph_node', {uuid: node.uuid}) }}">
+				<circle cx="{{500 + 300 * node.positionX()}}" cy="{{500 + 300 * node.positionY()}}" r="20" stroke-width="1" stroke="cyan" /></a>
+			{% endfor %}
+
+			{% for e in edges %}
+				<a href="{{ path('graph_edge', {uuid: e.uuid}) }}">
+				<polygon points="{{500 + 300 * e.source.positionX()}} {{500 + 300 * e.source.positionY()}} {{500 + 300 * e.target.positionX()}} {{500 + 300 * e.target.positionY()}}" stroke="cyan" stroke-width="{{ edge.uuid == e.uuid ? 5 : 1 }}" />
+				</a>
+			{% endfor %}
+		</svg>
+
+		<div>
+			<a href="{{ path('graph_index') }}">
+			Back
+			</a>
+			<h1>Edge {{ edge.uuid }}</h1>
+
+			<dl>
+				<dt>From</dt>
+				<dd><a href="{{ path('graph_node', {uuid: edge.source.uuid}) }}">{{edge.source.uuid}}</a></dd>
+				<dt>To</dt>
+				<dd><a href="{{ path('graph_node', {uuid: edge.target.uuid}) }}">{{edge.target.uuid}}</a></dd>
+				<dt>Delay</dt>
+				<dd>{{ edge.delay }}</dd>
+				<dt>Reverse Edge</dt>
+				<dd>
+				{% if reverse is not null %}
+				<a href="{{ path('graph_edge', {uuid: reverse.uuid}) }}">{{reverse.uuid}}</a>
+				{% else %}
+					none
+				{% endif %}
+				</dd>
+			</dl>
+
+			<h2>Signals</h2>
+
+			<table>
+				<thead>
+					<tr>
+						<th>UUID</th>
+						<th>Message</th>
+						<th>Transmitted</th>
+						<th>Acked</th>
+					</tr>
+				</thead>
+				<tbody>
+				{% for signal in edge.signals %}
+					<tr>
+						<td>{{ signal.uuid }}</td>
+						<td><a href="{{ path('graph_message', {uuid: signal.message.uuid}) }}" title="">{{ signal.message.uuid }}</a></td>
+						<td>{{ signal.transmittedAt }}</td>
+						<td>{{ signal.acknowledgment ? signal.acknowledgment.ackedAt : '-' }}</td>
+					</tr>
+				{% else %}
+					<tr>
+						<td colspan="4" align="center">
+							No Signals yet
+						</td>
+					</tr>
+				{% endfor %}
+				</tbody>
+			</table>
+		</div>
+	</section>
+{% endblock %}

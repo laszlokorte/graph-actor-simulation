@@ -1,0 +1,68 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+	<section style="display: flex;">
+		<svg viewBox="0 0 1000 1000" width="500" height="700">
+			{% for i, node in nodes %}
+				<a href="{{ path('graph_node', {uuid: node.uuid}) }}">
+				<circle cx="{{500 + 300 * node.positionX()}}" cy="{{500 + 300 * node.positionY()}}" r="20" stroke-width="1" stroke="cyan" /></a>
+			{% endfor %}
+
+			{% for edge in edges %}
+				<a href="{{ path('graph_edge', {uuid: edge.uuid}) }}">
+				<polygon points="{{500 + 300 * edge.source.positionX()}} {{500 + 300 * edge.source.positionY()}} {{500 + 300 * edge.target.positionX()}} {{500 + 300 * edge.target.positionY()}}" stroke="cyan" stroke-width="1" />
+				</a>
+			{% endfor %}
+
+
+
+			{% for signal in message.signals %}
+				<polygon points="{{500 + 300 * signal.edge.source.positionX()}} {{500 + 300 * signal.edge.source.positionY()}} {{500 + 300 * signal.edge.target.positionX()}} {{500 + 300 * signal.edge.target.positionY()}}" stroke="green" stroke-width="5" />
+			{% endfor %}
+		</svg>
+
+		<div>
+			<a href="{{ path('graph_index') }}">
+			Back
+			</a>
+			<h1>Message {{ message.uuid }}</h1>
+
+			<dl>
+				<dt>Created At</dt>
+				<dd>{{ message.createdAt }}</dd>
+				<dt>Sender</dt>
+				<dd>{{ message.sender.uuid }}</dd>
+				<dt>Receiver</dt>
+				<dd>{{ message.receiver.uuid }}</dd>
+			</dl>
+
+			<h2>Signals</h2>
+
+			<table width="100%">
+				<thead>
+					<tr>
+						<th>UUID</th>
+						<th>Transmitted at</th>
+						<th>Edge</th>
+						<th>From</th>
+						<th>To</th>
+					</tr>
+				</thead>
+				<tbody>
+				{% for signal in message.signals %}
+					<tr>
+						<td>{{ signal.uuid }}</td>
+						<td align="center">{{ signal.transmittedAt }}</td>
+						<td align="center"><a href="{{ path('graph_edge',{uuid: signal.edge.uuid}) }}" title="">{{ signal.edge.uuid }}</a></td>
+						<td align="center"><a href="{{ path('graph_edge',{uuid: signal.edge.source.uuid}) }}" title="">{{ signal.edge.source.uuid }}</a></td>
+						<td align="center"><a href="{{ path('graph_edge',{uuid: signal.edge.target.uuid}) }}" title="">{{ signal.edge.target.uuid }}</a></td>
+					</tr>
+				{% endfor %}
+				
+				</tbody>
+			</table>
+
+
+		</div>
+	</section>
+{% endblock %}

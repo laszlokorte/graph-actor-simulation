@@ -1,0 +1,80 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+
+	<div style="display: flex;">
+		<svg viewBox="0 0 1000 1000" width="500" height="700">
+			{% for i, node in nodes %}
+				<a href="{{ path('graph_node', {uuid: node.uuid}) }}">
+				<circle title="{{ node.uuid }}" cx="{{500 + 300 * node.positionX()}}" cy="{{500 + 300 * node.positionY()}}" r="20" /></a>
+			{% endfor %}
+
+			{% for edge in edges %}
+				<a href="{{ path('graph_edge', {uuid: edge.uuid}) }}">
+				<polygon points="{{500 + 300 * edge.source.positionX()}} {{500 + 300 * edge.source.positionY()}} {{500 + 300 * edge.target.positionX()}} {{500 + 300 * edge.target.positionY()}}" stroke="cyan" />
+				</a>
+			{% endfor %}
+		</svg>
+		<div>
+						<h1>Network Overview</h1>
+
+		<section>
+			<h1>Nodes</h1>
+
+			<table width="100%">
+				<thead>
+					<tr>
+						<th>UUID</th>
+						<th>Capacity</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for node in nodes %}
+						<tr>
+						<td><a href="{{ path('graph_node', {uuid: node.uuid}) }}">{{ node.uuid }}</a></td>
+						<td>{{ node.capacity }}</td>
+					</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+
+			{{ form(createNodeForm) }}
+
+
+
+			<h2>Edges</h2>
+
+			<table width="100%">
+				<thead>
+					<tr>
+						<th>UUID</th>
+						<th>Source</th>
+						<th>Target</th>
+						<th>Delay</th>
+					</tr>
+				</thead>
+				<tbody>
+				{% for edge in edges %}
+					<tr>
+						<td><a href="{{ path('graph_edge', {uuid: edge.uuid}) }}">{{ edge.uuid }}</a></td>
+						<td align="center"><a href="{{ path('graph_node', {uuid: edge.source.uuid}) }}">{{edge.source.uuid}}</a></td>
+						
+						<td align="center"><a href="{{ path('graph_node', {uuid: edge.target.uuid}) }}">{{edge.target.uuid}}</a></td>
+
+						<td>{{ edge.delay }}</td>
+					</tr>
+				{% endfor %}
+				</tbody>
+			</table>
+
+			{{ form(createEdgeForm) }}
+
+			<h2>Simulation</h2>
+
+	        <a href="{{ path('simulation_next') }}">Run Simulation</a>
+
+
+		</section>
+		</div>
+	</div>
+{% endblock %}

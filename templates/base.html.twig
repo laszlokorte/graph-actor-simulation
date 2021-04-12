@@ -2,11 +2,39 @@
 <html>
     <head>
         <meta charset="UTF-8">
-        <title>{% block title %}Welcome!{% endblock %}</title>
+        <title>{% block title %}Network Simulator{% endblock %}</title>
         {# Run `composer require symfony/webpack-encore-bundle`
            and uncomment the following Encore helpers to start using Symfony UX #}
         {% block stylesheets %}
             {#{{ encore_entry_link_tags('app') }}#}
+            <style>
+                table {
+                    min-width: 100%;
+                    border-collapse: collapse;
+                }
+
+                th {
+                    text-align: left;
+                }
+
+                thead tr:last-child th {
+                    border-bottom: 1px solid black;
+                }
+
+                tbody tr:nth-child(2n) td {
+                    background: #f0f0f0;
+                }
+
+                tbody td {
+                    padding-right: 2em;
+                }
+
+                td > a {
+                    white-space: nowrap;
+                    font-size: smaller;
+                    font-family: monospace;
+                }
+            </style>
         {% endblock %}
 
         {% block javascripts %}

@@ -1,0 +1,95 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+	<section style="display: flex;">
+		<svg viewBox="0 0 1000 1000" width="500" height="700">
+			{% for i, n in nodes %}
+				<a href="{{ path('graph_node', {uuid: n.uuid}) }}">
+				<circle cx="{{500 + 300 * n.positionX()}}" cy="{{500 + 300 * n.positionY()}}" r="20" stroke-width="{{ node.uuid == n.uuid ? 5 : 1 }}" stroke="cyan" /></a>
+			{% endfor %}
+
+			{% for e in edges %}
+				<a href="{{ path('graph_edge', {uuid: e.uuid}) }}">
+				<polygon points="{{500 + 300 * e.source.positionX()}} {{500 + 300 * e.source.positionY()}} {{500 + 300 * e.target.positionX()}} {{500 + 300 * e.target.positionY()}}" stroke="cyan" stroke-width="1" />
+				</a>
+			{% endfor %}
+		</svg>
+
+		<div>
+			<a href="{{ path('graph_index') }}">
+			Back
+			</a>
+			<h1>Node {{ node.uuid }}</h1>
+
+			<dl>
+				<dt>Capacity</dt>
+				<dd>{{ node.capacity }}</dd>
+			</dl>
+
+			<h2>Edges</h2>
+
+			<table width="100%">
+				<thead>
+					<tr>
+						<th>UUID</th>
+						<th>Source</th>
+						<th>Target</th>
+						<th>Delay</th>
+					</tr>
+				</thead>
+				<tbody>
+				{% for edge in node.incomingEdges %}
+					<tr>
+						<td><a href="{{ path('graph_edge', {uuid: edge.uuid}) }}">{{ edge.uuid }}</a></td>
+						<td align="center"><a href="{{ path('graph_node', {uuid: edge.source.uuid}) }}">{{edge.source.uuid}}</a></td>
+						<td align="center">this</td>
+						<td>{{edge.delay}}</td>
+					</tr>
+				{% endfor %}
+				{% for edge in node.outgoingEdges %}
+					<tr>
+						<td><a href="{{ path('graph_edge', {uuid: edge.uuid}) }}">{{ edge.uuid }}</a></td>
+						<td align="center">this</td>
+						<td align="center"><a href="{{ path('graph_node', {uuid: edge.target.uuid}) }}">{{edge.target.uuid}}</a></td>
+						<td>{{edge.delay}}</td>
+					</tr>
+				{% endfor %}
+				</tbody>
+			</table>
+
+
+			{{ form(createEdgeForm) }}
+
+
+			<h2>Messages</h2>
+
+			<table width="100%">
+				<thead>
+					<tr>
+						<th>Message</th>
+						<th>Sender</th>
+						<th>Receiver</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for message in node.incomingMessages %}
+						<tr>
+<td><a href="{{ path('graph_message', {uuid: message.uuid}) }}">{{ message.uuid }}</a></td>
+<td align="center"><a href="{{ path('graph_node', {uuid: message.sender.uuid}) }}">{{message.sender.uuid}}</a></td>
+<td align="center">this</td>
+</tr>
+					{% endfor %}
+					{% for message in node.outgoingMessages %}
+						<tr>
+<td><a href="{{ path('graph_message', {uuid: message.uuid}) }}">{{ message.uuid }}</a></td>
+<td align="center">this</td>
+<td align="center"><a href="{{ path('graph_node', {uuid: message.receiver.uuid}) }}">{{message.receiver.uuid}}</a></td>
+</tr>
+				{% endfor %}
+				</tbody>
+			</table>
+			<h3>Send </h3>
+			{{ form(createMessageForm) }}
+		</div>
+	</section>
+{% endblock %}

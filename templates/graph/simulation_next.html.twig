@@ -1,0 +1,211 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+	<section style="display: flex;">
+		<svg viewBox="0 0 1000 1000" width="500" height="700">
+			{% for i, node in nodes %}
+				<a href="{{ path('graph_node', {uuid: node.uuid}) }}">
+				<circle cx="{{500 + 300 * node.positionX()}}" cy="{{500 + 300 * node.positionY()}}" r="20" stroke-width="1" stroke="cyan" /></a>
+			{% endfor %}
+
+			{% for edge in edges %}
+				<a href="{{ path('graph_edge', {uuid: edge.uuid}) }}">
+				<polygon points="{{500 + 300 * edge.source.positionX()}} {{500 + 300 * edge.source.positionY()}} {{500 + 300 * edge.target.positionX()}} {{500 + 300 * edge.target.positionY()}}" stroke="cyan" stroke-width="1" />
+				</a>
+			{% endfor %}
+		</svg>
+
+		<div>
+			<a href="{{ path('graph_index') }}">
+			Back
+			</a>
+
+			{% if not timestep %}
+				<h2>Start Simulation</h2>
+
+				{{ form(timestepForm) }}
+			{% else %}
+				<h1>Next Step</h1>
+
+			<h2>Current Step: {{timestep}}</h2>
+			{{ form(simulationResetForm) }}
+			{{ form(timestepForm) }}
+
+
+			<h2>New Messages</h2>
+
+			<form action="{{ path('simulation_message') }}" method="post" accept-charset="utf-8">
+				<button type="submit">New Random Message</button>
+			</form>
+
+			<table>
+				<thead>
+					<tr>
+						<th>Message</th>
+						<th>Created At</th>
+						<th>Sender</th>
+						<th>Sender Capacity</th>
+						<th>Receiver</th>
+						<th>Edge</th>
+					</tr>
+				</thead>
+				<tbody>
+				{% for newMessage in newMessages %}
+					<tr>
+						<td><a href="{{path('graph_message',{uuid: newMessage.uuid|unpack})}}" title="">{{newMessage.uuid|unpack}}</a></td>
+						<td>{{ newMessage.createdAt }}</td>
+						<td><a href="{{path('graph_node',{uuid: newMessage.sender|unpack})}}" title="">{{newMessage.sender|unpack}}</a></td>
+						<td>{{ newMessage.senderUsedCapacity }} / {{ newMessage.senderMaxCapacity }}</td>
+						<td><a href="{{path('graph_node',{uuid: newMessage.receiver|unpack})}}" title="">{{newMessage.receiver|unpack}}</a></td>
+						<td>
+							<a href="{{path('graph_edge',{uuid: newMessage.edge|unpack})}}" title="">{{newMessage.edge|unpack}}</a>
+						</td>
+					</tr>
+				{% else %}
+					<tr>
+						<td align="center" colspan="6">No messages to dispatch</td>
+					</tr>
+				{% endfor %}
+				</tbody>
+			</table>
+
+
+			<form action="{{ path('simulation_message_dispatch') }}" method="post" accept-charset="utf-8">
+				<button {% if newMessages is empty %}disabled {% endif %}  type="submit">Dispatch Random Message</button>
+			</form>
+
+			<h2>Trapped messages</h2>
+
+
+
+			<table>
+				<thead>
+					<tr>
+						<th>Message</th>
+						<th>Created At</th>
+						<th>Sender</th>
+						<th>Receiver</th>
+					</tr>
+				</thead>
+				<tbody>
+				{% for trapped in trappedMessages %}
+					<tr>
+						<td><a href="{{path('graph_message',{uuid: trapped.uuid|unpack})}}" title="">{{trapped.uuid|unpack}}</a></td>
+						<td>{{ trapped.createdAt }}</td>
+						<td><a href="{{path('graph_node',{uuid: trapped.sender|unpack})}}" title="">{{trapped.sender|unpack}}</a></td>
+						<td><a href="{{path('graph_node',{uuid: trapped.receiver|unpack})}}" title="">{{trapped.receiver|unpack}}</a></td>
+					</tr>
+				{% else %}
+					<tr>
+						<td align="center" colspan="6">No trapped messages</td>
+					</tr>
+				{% endfor %}
+				</tbody>
+			</table>
+
+			<form action="{{ path('simulation_message_discard_trapped') }}" method="post" accept-charset="utf-8">
+				<button {% if trappedMessages is empty %}disabled {% endif %}   type="submit">Discard all trapped</button>
+			</form>
+
+			<h2>Transit Messages</h2>
+
+			<table>
+				<thead>
+					<tr>
+
+						<th>At Node</th>
+						<th>Node Capacity</th>
+						<th>Source</th>
+						<th>Transmitted At</th>
+						<th>Delayed</th>
+						<th>Ready At</th>
+						<th>Ready</th>
+						<th>InCap</th>
+						<th>Message</th>
+						<th>Signal</th>
+						<th>Edges</th>
+					</tr>
+				</thead>
+				<tbody>
+				{% for transitMessage in transitMessages %}
+					<tr>
+
+						<td><a href="{{path('graph_node',{uuid:transitMessage.target|unpack})}}">{{transitMessage.target|unpack}}</a></td>
+						<td>{{ transitMessage.targetUsedCapacity }}/{{ transitMessage.targetMaxCapacity }}</td>
+						<td><a href="{{path('graph_node',{uuid:transitMessage.source|unpack})}}">{{transitMessage.source|unpack}}</a></td>
+
+						<td>{{transitMessage.transmittedAt}}
+						</td>
+						<td>{{transitMessage.delay}}</td>
+						<td>{{transitMessage.readyAt}}</td>
+						<td><progress value="{{timestep - transitMessage.transmittedAt}}" max="{{transitMessage.delay}}"></progress></td>
+						<td>{{ transitMessage.inCapacity ? '+' : '-' }}</td>
+						<td><a href="{{path('graph_message',{uuid:transitMessage.uuid|unpack})}}">{{transitMessage.uuid|unpack}}</a></td>
+						<td>{{transitMessage.signal|unpack}}</td>
+						
+						<td>
+						{% if not transitMessage.trapped %}
+							<a href="{{path('graph_edge',{uuid: transitMessage.nextEdge|unpack})}}" title="">{{transitMessage.nextEdge|unpack}}</a>
+						{% else %}
+							Trapped
+						{% endif %}
+						</td>
+					</tr>
+				{% else %}
+					<tr>
+						<td align="center" colspan="11">No messages in transit</td>
+					</tr>
+				{% endfor %}
+				</tbody>
+			</table>
+
+
+
+
+			<form action="{{ path('simulation_message_forward') }}" method="post" accept-charset="utf-8">
+				<button {% if transitMessages is empty %}disabled {% endif %} type="submit">Forward Random Message</button>
+			</form>
+
+
+			<h2>Pending Acknowledgments</h2>
+
+			<table>
+				<thead>
+					<tr>
+						<th>Ready</th>
+						<th>Receiver Capacity</th>
+						<th>Signal</th>
+						<th>Source</th>
+						<th>Target</th>
+						<th>Message</th>
+						<th>Transmitted</th>
+					</tr>
+				</thead>
+				<tbody>
+				{% for pendingAck in pendingAcknowledgments %}
+					<tr>
+						<td>{{ pendingAck.ready ? '+' : '-' }}</td>
+						<td>{{ pendingAck.total_occupation }} / {{ pendingAck.capacity }}</td>
+						<td>{{ pendingAck.signal|unpack }}</td>
+						<td><a href="{{path('graph_node',{uuid: pendingAck.source|unpack})}}" title="">{{pendingAck.source|unpack}}</a></td>
+						<td><a href="{{path('graph_node',{uuid: pendingAck.target|unpack})}}" title="">{{pendingAck.target|unpack}}</a></td>
+						<td><a href="{{path('graph_message',{uuid: pendingAck.message|unpack})}}" title="">{{pendingAck.message|unpack}}</a></td>
+						<td>{{ pendingAck.transmittedAt }}</td>
+					</tr>
+				{% else %}
+					<tr>
+						<td align="center" colspan="6">No pending acknowledgments</td>
+					</tr>
+				{% endfor %}
+				</tbody>
+			</table>
+
+			<form action="{{ path('simulation_message_ack') }}" method="post" accept-charset="utf-8">
+				<button {% if pendingAcknowledgments is empty %}disabled {% endif %} type="submit">Ack Random Message</button>
+			</form>
+			{% endif %}
+
+			
+		</div>
+	</section>
+{% endblock %}
