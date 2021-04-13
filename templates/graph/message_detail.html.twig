@@ -10,15 +10,21 @@
 
 			{% for edge in edges %}
 				<a href="{{ path('graph_edge', {uuid: edge.uuid}) }}">
-				<polygon points="{{500 + 300 * edge.source.positionX()}} {{500 + 300 * edge.source.positionY()}} {{500 + 300 * edge.target.positionX()}} {{500 + 300 * edge.target.positionY()}}" stroke="cyan" stroke-width="1" />
+				<polygon points="{{500 + 300 * edge.source.positionX()}} {{500 + 300 * edge.source.positionY()}} {{500 + 300 * edge.target.positionX()}} {{500 + 300 * edge.target.positionY()}}" stroke="black" stroke-width="1" />
 				</a>
 			{% endfor %}
 
 
 
 			{% for signal in message.signals %}
-				<polygon points="{{500 + 300 * signal.edge.source.positionX()}} {{500 + 300 * signal.edge.source.positionY()}} {{500 + 300 * signal.edge.target.positionX()}} {{500 + 300 * signal.edge.target.positionY()}}" stroke="green" stroke-width="5" />
+				<polygon points="{{500 + 300 * signal.edge.source.positionX()}} {{500 + 300 * signal.edge.source.positionY()}} {{500 + 300 * signal.edge.target.positionX()}} {{500 + 300 * signal.edge.target.positionY()}}" stroke="{{
+				{0:'blue',1:'green',2:'yellow',3:'trapped'}[signal.acknowledgment.state|default(0)]
+				}}" stroke-width="5" />
 			{% endfor %}
+
+			<circle cx="{{500 + 300 * message.sender.positionX()}}" cy="{{500 + 300 * message.sender.positionY()}}" r="30" fill="none" stroke-width="4" stroke="orange" />
+
+			<circle cx="{{500 + 300 * message.receiver.positionX()}}" cy="{{500 + 300 * message.receiver.positionY()}}" r="30" fill="none" stroke-width="4" stroke="magenta" />
 		</svg>
 
 		<div>
@@ -46,6 +52,7 @@
 						<th>Edge</th>
 						<th>From</th>
 						<th>To</th>
+						<th>Acked</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -54,8 +61,11 @@
 						<td>{{ signal.uuid }}</td>
 						<td align="center">{{ signal.transmittedAt }}</td>
 						<td align="center"><a href="{{ path('graph_edge',{uuid: signal.edge.uuid}) }}" title="">{{ signal.edge.uuid }}</a></td>
-						<td align="center"><a href="{{ path('graph_edge',{uuid: signal.edge.source.uuid}) }}" title="">{{ signal.edge.source.uuid }}</a></td>
-						<td align="center"><a href="{{ path('graph_edge',{uuid: signal.edge.target.uuid}) }}" title="">{{ signal.edge.target.uuid }}</a></td>
+						<td align="center"><a href="{{ path('graph_node',{uuid: signal.edge.source.uuid}) }}" title="">{{ signal.edge.source.uuid }}</a></td>
+						<td align="center"><a href="{{ path('graph_node',{uuid: signal.edge.target.uuid}) }}" title="">{{ signal.edge.target.uuid }}</a></td>
+						<td>
+							{{ signal.acknowledgment ? signal.acknowledgment.state : '-' }}
+						</td>
 					</tr>
 				{% endfor %}
 				

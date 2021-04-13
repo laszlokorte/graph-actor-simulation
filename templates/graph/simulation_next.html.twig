@@ -55,7 +55,7 @@
 						<td><a href="{{path('graph_message',{uuid: newMessage.uuid|unpack})}}" title="">{{newMessage.uuid|unpack}}</a></td>
 						<td>{{ newMessage.createdAt }}</td>
 						<td><a href="{{path('graph_node',{uuid: newMessage.sender|unpack})}}" title="">{{newMessage.sender|unpack}}</a></td>
-						<td>{{ newMessage.senderUsedCapacity }} / {{ newMessage.senderMaxCapacity }}</td>
+						<td>{{ newMessage.current_load }} / {{ newMessage.max_load }}</td>
 						<td><a href="{{path('graph_node',{uuid: newMessage.receiver|unpack})}}" title="">{{newMessage.receiver|unpack}}</a></td>
 						<td>
 							<a href="{{path('graph_edge',{uuid: newMessage.edge|unpack})}}" title="">{{newMessage.edge|unpack}}</a>
@@ -115,7 +115,7 @@
 
 						<th>At Node</th>
 						<th>Node Capacity</th>
-						<th>Source</th>
+						<th>Edge</th>
 						<th>Transmitted At</th>
 						<th>Delayed</th>
 						<th>Ready At</th>
@@ -130,22 +130,22 @@
 				{% for transitMessage in transitMessages %}
 					<tr>
 
-						<td><a href="{{path('graph_node',{uuid:transitMessage.target|unpack})}}">{{transitMessage.target|unpack}}</a></td>
-						<td>{{ transitMessage.targetUsedCapacity }}/{{ transitMessage.targetMaxCapacity }}</td>
-						<td><a href="{{path('graph_node',{uuid:transitMessage.source|unpack})}}">{{transitMessage.source|unpack}}</a></td>
+						<td><a href="{{path('graph_node',{uuid:transitMessage.node|unpack})}}">{{transitMessage.node|unpack}}</a></td>
+						<td>{{ transitMessage.current_load }}/{{ transitMessage.max_load }}</td>
+						<td><a href="{{path('graph_edge',{uuid:transitMessage.incoming_edge|unpack})}}">{{transitMessage.incoming_edge|unpack}}</a></td>
 
-						<td>{{transitMessage.transmittedAt}}
+						<td>{{transitMessage.transmitted_at}}
 						</td>
 						<td>{{transitMessage.delay}}</td>
-						<td>{{transitMessage.readyAt}}</td>
-						<td><progress value="{{timestep - transitMessage.transmittedAt}}" max="{{transitMessage.delay}}"></progress></td>
-						<td>{{ transitMessage.inCapacity ? '+' : '-' }}</td>
-						<td><a href="{{path('graph_message',{uuid:transitMessage.uuid|unpack})}}">{{transitMessage.uuid|unpack}}</a></td>
+						<td>{{transitMessage.ready_at}}</td>
+						<td><progress value="{{timestep - transitMessage.transmitted_at}}" max="{{transitMessage.delay}}"></progress></td>
+						<td>{{ transitMessage.current_load < transitMessage.max_load ? '+' : '-' }}</td>
+						<td><a href="{{path('graph_message',{uuid:transitMessage.message|unpack})}}">{{transitMessage.message|unpack}}</a></td>
 						<td>{{transitMessage.signal|unpack}}</td>
 						
 						<td>
 						{% if not transitMessage.trapped %}
-							<a href="{{path('graph_edge',{uuid: transitMessage.nextEdge|unpack})}}" title="">{{transitMessage.nextEdge|unpack}}</a>
+							<a href="{{path('graph_edge',{uuid: transitMessage.outgoing_edge|unpack})}}" title="">{{transitMessage.outgoing_edge|unpack}}</a>
 						{% else %}
 							Trapped
 						{% endif %}
@@ -173,10 +173,12 @@
 				<thead>
 					<tr>
 						<th>Ready</th>
+						<th>cyclic</th>
+						<th>trapped</th>
+						<th>goal</th>
 						<th>Receiver Capacity</th>
 						<th>Signal</th>
-						<th>Source</th>
-						<th>Target</th>
+						<th>Node</th>
 						<th>Message</th>
 						<th>Transmitted</th>
 					</tr>
@@ -184,13 +186,19 @@
 				<tbody>
 				{% for pendingAck in pendingAcknowledgments %}
 					<tr>
-						<td>{{ pendingAck.ready ? '+' : '-' }}</td>
-						<td>{{ pendingAck.total_occupation }} / {{ pendingAck.capacity }}</td>
+						<td>
+						{% if pendingAck.ready_at %}
+						<progress value="{{pendingAck.time}}" max="{{pendingAck.ready_at}}"></progress>
+					{% endif %}
+						</td>
+						<td>{{ pendingAck.cycle_detected ? '+' : '-' }}</td>
+						<td>{{ pendingAck.deadend ? '+' : '-' }}</td>
+						<td>{{ pendingAck.goal ? '+' : '-' }}</td>
+						<td>{{ pendingAck.current_load }} / {{ pendingAck.max_load }}</td>
 						<td>{{ pendingAck.signal|unpack }}</td>
-						<td><a href="{{path('graph_node',{uuid: pendingAck.source|unpack})}}" title="">{{pendingAck.source|unpack}}</a></td>
-						<td><a href="{{path('graph_node',{uuid: pendingAck.target|unpack})}}" title="">{{pendingAck.target|unpack}}</a></td>
+						<td><a href="{{path('graph_node',{uuid: pendingAck.node|unpack})}}" title="">{{pendingAck.node|unpack}}</a></td>
 						<td><a href="{{path('graph_message',{uuid: pendingAck.message|unpack})}}" title="">{{pendingAck.message|unpack}}</a></td>
-						<td>{{ pendingAck.transmittedAt }}</td>
+						<td>{{ pendingAck.transmitted_at }}</td>
 					</tr>
 				{% else %}
 					<tr>

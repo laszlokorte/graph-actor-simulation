@@ -17,6 +17,7 @@ use App\Form\Type\CreateMessageType;
 use App\Form\Type\CreateNodeMessageType;
 use App\Form\Type\CreateNodeEdgeType;
 use App\Form\Type\CreateTimestepType;
+use App\Form\Type\GraphClearType;
 use App\Form\Type\SimulationResetType;
 use App\Form\Type\SimulationStepType;
 use App\Repository\NodeRepository;
@@ -55,6 +56,11 @@ class GraphController
             'method' => 'POST',
         ]);
 
+        $graphClearForm = $formFactory->create(GraphClearType::class, null, [
+            'action' => $urlGenerator->generate('graph_clear'),
+            'method' => 'POST',
+        ]);
+
         $simulationStepForm = $formFactory->create(SimulationStepType::class, null, [
             'action' => $urlGenerator->generate('simulation_step'),
             'method' => 'POST',
@@ -67,6 +73,7 @@ class GraphController
             'createNodeForm' => $createNodeForm->createView(),
             'createEdgeForm' => $createEdgeForm->createView(),
             'simulationResetForm' => $simulationResetForm->createView(),
+            'graphClearForm' => $graphClearForm->createView(),
             'simulationStepForm' => $simulationStepForm->createView(),
             'createMessageForm' => $createMessageForm->createView(),
         ];
@@ -261,6 +268,31 @@ class GraphController
         return new RedirectResponse($urlGenerator->generate('graph_node', ['uuid' => $node->getUuid()]));
     }
 
+    /**
+     * @Route("/graph/clear", methods={"POST"}, name="graph_clear")
+     */
+    public function graphClear(Request $request, NodeRepository $nodeRepo, FormFactoryInterface $formFactory, UrlGeneratorInterface $urlGenerator, EntityManagerInterface  $entityManager)
+    {
+
+        $resetForm = $formFactory->create(GraphClearType::class, null, [
+            'action' => $urlGenerator->generate('graph_clear'),
+            'method' => 'POST',
+        ]);
+
+        $resetForm->handleRequest($request);
+
+        if ($resetForm->isSubmitted() && $resetForm->isValid()) {
+            $connection = $entityManager->getConnection();
+
+            $connection->beginTransaction();
+            $connection->exec("DELETE FROM edge");
+            $connection->exec("DELETE FROM node");
+            $connection->commit();
+        }
+
+        return new RedirectResponse($urlGenerator->generate('graph_index'));
+    }
+
 
     /**
      * @Route("/simulation/reset", methods={"POST"}, name="simulation_reset")
@@ -317,7 +349,7 @@ class GraphController
      * @Route("/simulation/next", methods={"GET"}, name="simulation_next")
      * @Template
      */
-    public function simulationNext(Request $request, NodeRepository $nodeRepo, EdgeRepository $edgeRepo, FormFactoryInterface $formFactory, UrlGeneratorInterface $urlGenerator, EntityManagerInterface  $entityManager)
+    public function simulationNext(Request $request, NodeRepository $nodeRepo, EdgeRepository $edgeRepo, MessageRepository $messageRepo, FormFactoryInterface $formFactory, UrlGeneratorInterface $urlGenerator, EntityManagerInterface  $entityManager)
     {
         $connection = $entityManager->getConnection();
 
@@ -326,24 +358,24 @@ class GraphController
         $timestepStmt->execute();
         $timestep = $timestepStmt->fetchColumn();
 
-        $newMessagesSQL = "SELECT * FROM pending_message WHERE NOT trapped";
+        $newMessagesSQL = "SELECT * FROM available_dispatch WHERE NOT trapped";
         $newMessagesStmt = $connection->prepare($newMessagesSQL);
         $newMessagesStmt->execute();
         $newMessages = $newMessagesStmt->fetchAll();
 
-        $trappedMessagesSQL = "SELECT * FROM pending_message WHERE trapped";
+        $trappedMessagesSQL = "SELECT * FROM available_dispatch WHERE trapped";
         $trappedMessagesStmt = $connection->prepare($trappedMessagesSQL);
         $trappedMessagesStmt->execute();
         $trappedMessages = $trappedMessagesStmt->fetchAll();
 
-        $transitMessagesSQL = "SELECT * FROM transit_message";
+        $transitMessagesSQL = "SELECT * FROM available_redirect";
         $transitMessagesStmt = $connection->prepare($transitMessagesSQL);
         $transitMessagesStmt->execute();
         $transitMessages = $transitMessagesStmt->fetchAll();
 
 
 
-        $pendingAcknowledgmentsSQL = "SELECT * FROM pending_ack";
+        $pendingAcknowledgmentsSQL = "SELECT * FROM available_response";
         $pendingAcknowledgmentsStmt = $connection->prepare($pendingAcknowledgmentsSQL);
         $pendingAcknowledgmentsStmt->execute();
         $pendingAcknowledgments = $pendingAcknowledgmentsStmt->fetchAll();
@@ -364,6 +396,7 @@ class GraphController
             'timestep' => $timestep,
             'nodes' => $nodeRepo->findAll(),
             'edges' => $edgeRepo->findAll(),
+            'messages' => $messageRepo->findAll(),
             'newMessages' => $newMessages,
             'trappedMessages' => $trappedMessages,
             'transitMessages' => $transitMessages,
@@ -405,7 +438,7 @@ class GraphController
     {
         $connection = $entityManager->getConnection();
 
-        $timestepSQL = "DELETE FROM message WHERE uuid IN (SELECT uuid FROM pending_message WHERE trapped)";
+        $timestepSQL = "DELETE FROM message WHERE uuid IN (SELECT uuid FROM available_dispatch WHERE trapped)";
         $timestepStmt = $connection->prepare($timestepSQL);
         $timestepStmt->execute();
 
@@ -420,7 +453,7 @@ class GraphController
     {
         $connection = $entityManager->getConnection();
 
-        $timestepSQL = "INSERT INTO signal SELECT :uuid AS signal_uuid, uuid as message, edge as edge, timeStep AS time FROM pending_message WHERE inCapacity AND NOT trapped ORDER BY createdAt ASC, RANDOM() LIMIT 1";
+        $timestepSQL = "INSERT INTO signal SELECT :uuid AS signal_uuid, uuid as message, edge as edge, timeStep AS time FROM available_dispatch WHERE current_load < max_load AND NOT trapped ORDER BY createdAt ASC, RANDOM() LIMIT 1";
         $timestepStmt = $connection->prepare($timestepSQL);
         $timestepStmt->bindValue(':uuid', (new \Symfony\Component\Uid\UuidV4())->toBinary());
 
@@ -437,7 +470,9 @@ class GraphController
     {
         $connection = $entityManager->getConnection();
 
-        $timestepSQL = "INSERT INTO signal(uuid, message, edge, transmitted_at) SELECT :uuid, uuid AS message, nextEdge, timestep FROM transit_message WHERE inCapacity AND ready AND NOT trapped ORDER BY RANDOM() LIMIT 1";
+        $timestepSQL = "INSERT INTO signal(uuid, message, edge, transmitted_at) 
+            SELECT :uuid, message, outgoing_edge, time FROM available_redirect 
+            WHERE ready and current_load < max_load ORDER BY RANDOM() LIMIT 1";
         $timestepStmt = $connection->prepare($timestepSQL);
         $timestepStmt->bindValue(':uuid', (new \Symfony\Component\Uid\UuidV4())->toBinary());
         $timestepStmt->execute();
@@ -453,7 +488,10 @@ class GraphController
     {
         $connection = $entityManager->getConnection();
 
-        $timestepSQL = "INSERT INTO acknowledgment(uuid, signal, acked_at) SELECT :uuid, signal, time FROM pending_ack WHERE ready AND inCapacity ORDER BY RANDOM() LIMIT 1";
+        $timestepSQL = "INSERT INTO acknowledgment(uuid, signal, acked_at, state) 
+SELECT :uuid, signal, time, state FROM available_response
+WHERE current_load < max_load AND ready_at <= time
+ORDER BY RANDOM() LIMIT 1";
         $timestepStmt = $connection->prepare($timestepSQL);
         $timestepStmt->bindValue(':uuid', (new \Symfony\Component\Uid\UuidV4())->toBinary());
         $timestepStmt->execute();

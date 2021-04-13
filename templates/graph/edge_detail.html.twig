@@ -10,9 +10,11 @@
 
 			{% for e in edges %}
 				<a href="{{ path('graph_edge', {uuid: e.uuid}) }}">
-				<polygon points="{{500 + 300 * e.source.positionX()}} {{500 + 300 * e.source.positionY()}} {{500 + 300 * e.target.positionX()}} {{500 + 300 * e.target.positionY()}}" stroke="cyan" stroke-width="{{ edge.uuid == e.uuid ? 5 : 1 }}" />
+				<polygon points="{{500 + 300 * e.source.positionX()}} {{500 + 300 * e.source.positionY()}} {{500 + 300 * e.target.positionX()}} {{500 + 300 * e.target.positionY()}}" stroke="black" stroke-width="1" />
 				</a>
 			{% endfor %}
+
+			<polygon points="{{500 + 300 * edge.source.positionX()}} {{500 + 300 * edge.source.positionY()}} {{500 + 300 * edge.target.positionX()}} {{500 + 300 * edge.target.positionY()}}" stroke="cyan" stroke-width="3" />
 		</svg>
 
 		<div>

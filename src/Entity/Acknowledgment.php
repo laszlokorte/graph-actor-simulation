@@ -27,6 +27,11 @@ class Acknowledgment
      */
     private $ackedAt;
 
+    /**
+     * @ORM\Column(type="integer")
+     */
+    private $state;
+
     public function getUuid(): ?string
     {
         return $this->uuid;
@@ -40,5 +45,21 @@ class Acknowledgment
     public function getAckedAt()
     {
         return $this->ackedAt;
+    }
+
+    public function getState() {
+        return $this->state;
+    }
+
+    public function isOk() {
+        return $this->state === 1;
+    }
+
+    public function isTrapped() {
+        return $this->state === 3;
+    }
+
+    public function isCyclic() {
+        return $this->state === 2;
     }
 }
