@@ -1,91 +1,77 @@
 BEGIN TRANSACTION;
+
+# List of discrete timesteps counting from 0 upwards
 DROP TABLE IF EXISTS "timestep";
 CREATE TABLE IF NOT EXISTS "timestep" (
-	"time"	INTEGER NOT NULL UNIQUE,
+	"time"	INTEGER NOT NULL UNIQUE, # timestep number
 	PRIMARY KEY("time" AUTOINCREMENT)
 );
+
+# A message is a package to be send from a sender to a receiver
 DROP TABLE IF EXISTS "message";
 CREATE TABLE IF NOT EXISTS "message" (
-	"uuid"	TEXT NOT NULL UNIQUE,
-	"created_at"	INTEGER NOT NULL,
-	"sender"	TEXT NOT NULL,
-	"receiver"	TEXT NOT NULL,
+	"uuid"	TEXT NOT NULL UNIQUE, # message id
+	"created_at"	INTEGER NOT NULL, # timestep the message was created
+	"sender"	TEXT NOT NULL, # sender address
+	"receiver"	TEXT NOT NULL, # receiver address
 	PRIMARY KEY("uuid"),
 	FOREIGN KEY("created_at") REFERENCES "timestep"("time") ON DELETE CASCADE ON UPDATE CASCADE,
 	FOREIGN KEY("sender") REFERENCES "node"("uuid"),
 	FOREIGN KEY("receiver") REFERENCES "node"("uuid")
 );
+
+# a directed connection between two nodes of which a message can be routed
 DROP TABLE IF EXISTS "edge";
 CREATE TABLE IF NOT EXISTS "edge" (
-	"uuid"	TEXT NOT NULL UNIQUE,
-	"source"	TEXT NOT NULL,
-	"target"	TEXT NOT NULL,
-	"delay"	INTEGER NOT NULL DEFAULT 1,
-	CHECK("source" <> "target"),
+	"uuid"	TEXT NOT NULL UNIQUE, # id of the edge
+	"source"	TEXT NOT NULL, # source node id
+	"target"	TEXT NOT NULL, # target node id
+	"delay"	INTEGER NOT NULL DEFAULT 1, # delay in number of timesteps a messages takes to travel this edge
+	CHECK("source" <> "target"), # no reflexive edges!
 	PRIMARY KEY("uuid"),
 	FOREIGN KEY("target") REFERENCES "node"("uuid") ON DELETE CASCADE ON UPDATE CASCADE,
 	FOREIGN KEY("source") REFERENCES "node"("uuid") ON DELETE CASCADE ON UPDATE CASCADE,
-	UNIQUE("source","target")
+	UNIQUE("source","target") # only one edge between two nodes
 );
+
+# a node can send an receive messages
 DROP TABLE IF EXISTS "node";
 CREATE TABLE IF NOT EXISTS "node" (
-	"uuid"	TEXT NOT NULL UNIQUE,
-	"capacity"	INTEGER NOT NULL DEFAULT 1,
+	"uuid"	TEXT NOT NULL UNIQUE, # id of the node
+	"capacity"	INTEGER NOT NULL DEFAULT 1, # number of messages the node can process per timestep
 	PRIMARY KEY("uuid")
 );
+
+# a signal represents the transmission of a message along an edge over one or more timesteps
 DROP TABLE IF EXISTS "signal";
 CREATE TABLE IF NOT EXISTS "signal" (
-	"uuid"	TEXT NOT NULL UNIQUE,
-	"message"	TEXT NOT NULL,
-	"edge"	TEXT NOT NULL,
-	"transmitted_at"	INTEGER NOT NULL,
+	"uuid"	TEXT NOT NULL UNIQUE, # signal id
+	"message"	TEXT NOT NULL, # message id
+	"edge"	TEXT NOT NULL, # id of the edge the signal travels along
+	"transmitted_at"	INTEGER NOT NULL, # timestep at which the signal is send. (it can be received as soon as transmitted_at + edge.delay)
 	PRIMARY KEY("uuid"),
 	FOREIGN KEY("message") REFERENCES "message"("uuid") ON UPDATE CASCADE ON DELETE CASCADE,
 	FOREIGN KEY("edge") REFERENCES "edge"("uuid") ON UPDATE CASCADE ON DELETE CASCADE,
 	FOREIGN KEY("transmitted_at") REFERENCES "timestep"("time") ON UPDATE CASCADE ON DELETE CASCADE,
-	UNIQUE("edge","transmitted_at")
+	UNIQUE("edge","transmitted_at") # maybe remove this? only allow one signal per timestep per edge?
 );
+
+# An acknowledgement is the reponse to a signal
 DROP TABLE IF EXISTS "acknowledgment";
 CREATE TABLE IF NOT EXISTS "acknowledgment" (
-	"uuid"	TEXT NOT NULL UNIQUE,
-	"signal"	TEXT NOT NULL UNIQUE,
-	"acked_at"	INTEGER NOT NULL,
-	"state"	INTEGER NOT NULL,
+	"uuid"	TEXT NOT NULL UNIQUE, # id of the acknowledgement
+	"signal"	TEXT NOT NULL UNIQUE, # id of the signal to be acknowledged
+	"acked_at"	INTEGER NOT NULL, # timestep at which the acknowledgment is triggered
+	"state"	INTEGER NOT NULL, # state of the acknowledgment (1=ok,2=cyclic,3=deadend)
+	# ok if the message has reached the receiver, 
+	# cyclic if the signal reached a node that already received the message via an earlier signal
+	# deadend if the signal reached a node that could not transmit it any further
 	PRIMARY KEY("uuid"),
 	FOREIGN KEY("acked_at") REFERENCES "timestep"("time") ON UPDATE CASCADE ON DELETE CASCADE,
 	FOREIGN KEY("signal") REFERENCES "signal"("uuid") ON UPDATE CASCADE ON DELETE CASCADE
 );
-INSERT INTO "timestep" ("time") VALUES (1),
- (2),
- (3),
- (4),
- (5),
- (6),
- (7);
-INSERT INTO "message" ("uuid","created_at","sender","receiver") VALUES (X'979af9d3001a4f879e9f8e0da77ecc5e',1,'�c�7��Oĵ�NV��.V',X'fe980123e1534f01b7b7b800e3b241f6'),
- ('���j�{Om�o��$�',2,'��^�JO5��6���','�c�7��Oĵ�NV��.V');
-INSERT INTO "edge" ("uuid","source","target","delay") VALUES ('��Rz�@O���흅','��^�JO5��6���',X'fe980123e1534f01b7b7b800e3b241f6',1),
- ('O�b	}�OV��{k�-o',X'fe980123e1534f01b7b7b800e3b241f6','�c�7��Oĵ�NV��.V',1),
- ('���|UOB�e��
-�','�c�7��Oĵ�NV��.V','���e�Oz����Tܔ',1),
- ('�N)fO?�p�]�i@�','���e�Oz����Tܔ','��^�JO5��6���',1);
-INSERT INTO "node" ("uuid","capacity") VALUES ('��^�JO5��6���',1),
- (X'fe980123e1534f01b7b7b800e3b241f6',1),
- ('�c�7��Oĵ�NV��.V',1),
- ('���e�Oz����Tܔ',1);
-INSERT INTO "signal" ("uuid","message","edge","transmitted_at") VALUES ('���w O9�rgUe_g',X'979af9d3001a4f879e9f8e0da77ecc5e','���|UOB�e��
-�',1),
- ('q+
-��Oи�6@��',X'979af9d3001a4f879e9f8e0da77ecc5e','�N)fO?�p�]�i@�',2),
- ('�Z�*�O*�^�j�|N','���j�{Om�o��$�','��Rz�@O���흅',2),
- ('�����EO��#�ןU�v',X'979af9d3001a4f879e9f8e0da77ecc5e','��Rz�@O���흅',3),
- ('���IwO��z�Aa�P�','���j�{Om�o��$�','O�b	}�OV��{k�-o',3);
-INSERT INTO "acknowledgment" ("uuid","signal","acked_at","state") VALUES ('6E�@~�O��[��A�','���IwO��z�Aa�P�',4,1),
- (',k�+bOOÜB8��y','�����EO��#�ןU�v',4,1),
- ('��*v,O����#���','q+
-��Oи�6@��',5,1),
- ('o��EO,��9|���','�Z�*�O*�^�j�|N',5,1),
- ('�؊5�Ox�����<!','���w O9�rgUe_g',6,1);
+
+# available_dispatch are messages that have been created but not send yet
 DROP VIEW IF EXISTS "available_dispatch";
 CREATE VIEW available_dispatch AS 
 SELECT message.created_at AS created_at,
@@ -104,8 +90,12 @@ INNER JOIN node sender ON sender.uuid = message.sender LEFT JOIN signal ON signa
 LEFT JOIN edge outgoing_edge ON outgoing_edge.source = message.sender
 LEFT JOIN node_workload ON (node_workload.uuid, node_workload.time) = (sender.uuid, current_timestep.time)
  WHERE signal.uuid IS NULL GROUP BY message.uuid, edge.uuid ORDER BY trapped ASC;
+
+# node_pair_time are all possible pairs of nodes and the current time step
 DROP VIEW IF EXISTS "node_pair_time";
 CREATE VIEW node_pair_time AS SELECT MAX(time) AS time, sender.uuid AS sender, receiver.uuid AS receiver FROM timestep INNER JOIN node sender INNER JOIN node receiver WHERE sender.uuid <> receiver.uuid GROUP BY sender.uuid, receiver.uuid ORDER BY RANDOM();
+
+# edges and their respective reverse (if available)
 DROP VIEW IF EXISTS "reverse_edge";
 CREATE VIEW reverse_edge AS
 SELECT 
@@ -118,6 +108,9 @@ reverse.delay AS reverse_delay
 FROM edge 
 LEFT JOIN edge reverse
 ON (edge.target, edge.source) = (reverse.source, reverse.target);
+
+# the load and capacity of each node at each timestep, calculated by summing the amount of
+# signals processed per timestep
 DROP VIEW IF EXISTS "node_workload";
 CREATE VIEW node_workload AS
 SELECT timestep.time, 
@@ -135,6 +128,8 @@ LEFT JOIN signal ack_signal ON ack_signal.edge = in_edge.uuid
 LEFT JOIN acknowledgment ON (acknowledgment.signal, acknowledgment.acked_at) = (ack_signal.uuid,  timestep.time)
 GROUP BY node.uuid, timestep.time
 ORDER BY timestep.time, node.uuid;
+
+# signals that have not been ackowledged yet but might be
 DROP VIEW IF EXISTS "available_response";
 CREATE VIEW available_response AS 
 SELECT *, 
@@ -168,6 +163,8 @@ LEFT JOIN acknowledgment outgoing_ack ON outgoing_ack.signal = outgoing_signal.u
 WHERE incoming_ack.uuid IS NULL
 GROUP BY message.uuid, incoming_signal.uuid
 ) i;
+
+# signals that can be further redirected to the next node
 DROP VIEW IF EXISTS "available_redirect";
 CREATE VIEW available_redirect AS
 SELECT 

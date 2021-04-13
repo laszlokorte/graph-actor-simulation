@@ -2,7 +2,7 @@
 
 {% block body %}
 	<section style="display: flex;">
-		<svg viewBox="0 0 1000 1000" width="500" height="700">
+		<svg style="flex-basis: 500px;flex-shrink: 0;" viewBox="0 0 1000 1000" width="500" height="700">
 			{% for i, node in nodes %}
 				<a href="{{ path('graph_node', {uuid: node.uuid}) }}">
 				<circle cx="{{500 + 300 * node.positionX()}}" cy="{{500 + 300 * node.positionY()}}" r="20" stroke-width="1" stroke="cyan" /></a>
@@ -15,7 +15,7 @@
 			{% endfor %}
 		</svg>
 
-		<div>
+		<div style="flex-shrink: 1;">
 			<a href="{{ path('graph_index') }}">
 			Back
 			</a>
@@ -42,21 +42,21 @@
 				<thead>
 					<tr>
 						<th>Message</th>
-						<th>Created At</th>
 						<th>Sender</th>
-						<th>Sender Capacity</th>
 						<th>Receiver</th>
-						<th>Edge</th>
+						<th>Created At</th>
+						<th>Sender Capacity</th>
+						<th>Send via</th>
 					</tr>
 				</thead>
 				<tbody>
 				{% for newMessage in newMessages %}
 					<tr>
 						<td><a href="{{path('graph_message',{uuid: newMessage.uuid|unpack})}}" title="">{{newMessage.uuid|unpack}}</a></td>
-						<td>{{ newMessage.createdAt }}</td>
 						<td><a href="{{path('graph_node',{uuid: newMessage.sender|unpack})}}" title="">{{newMessage.sender|unpack}}</a></td>
-						<td>{{ newMessage.current_load }} / {{ newMessage.max_load }}</td>
 						<td><a href="{{path('graph_node',{uuid: newMessage.receiver|unpack})}}" title="">{{newMessage.receiver|unpack}}</a></td>
+						<td>{{ newMessage.createdAt }}</td>
+						<td>{{ newMessage.current_load }}/{{ newMessage.max_load }}</td>
 						<td>
 							<a href="{{path('graph_edge',{uuid: newMessage.edge|unpack})}}" title="">{{newMessage.edge|unpack}}</a>
 						</td>
@@ -113,34 +113,22 @@
 				<thead>
 					<tr>
 
+						<th>Message</th>
 						<th>At Node</th>
 						<th>Node Capacity</th>
-						<th>Edge</th>
-						<th>Transmitted At</th>
-						<th>Delayed</th>
-						<th>Ready At</th>
 						<th>Ready</th>
-						<th>InCap</th>
-						<th>Message</th>
 						<th>Signal</th>
-						<th>Edges</th>
+						<th>Fordward via</th>
 					</tr>
 				</thead>
 				<tbody>
 				{% for transitMessage in transitMessages %}
 					<tr>
 
-						<td><a href="{{path('graph_node',{uuid:transitMessage.node|unpack})}}">{{transitMessage.node|unpack}}</a></td>
-						<td>{{ transitMessage.current_load }}/{{ transitMessage.max_load }}</td>
-						<td><a href="{{path('graph_edge',{uuid:transitMessage.incoming_edge|unpack})}}">{{transitMessage.incoming_edge|unpack}}</a></td>
-
-						<td>{{transitMessage.transmitted_at}}
-						</td>
-						<td>{{transitMessage.delay}}</td>
-						<td>{{transitMessage.ready_at}}</td>
-						<td><progress value="{{timestep - transitMessage.transmitted_at}}" max="{{transitMessage.delay}}"></progress></td>
-						<td>{{ transitMessage.current_load < transitMessage.max_load ? '+' : '-' }}</td>
 						<td><a href="{{path('graph_message',{uuid:transitMessage.message|unpack})}}">{{transitMessage.message|unpack}}</a></td>
+						<td><a href="{{path('graph_node',{uuid:transitMessage.node|unpack})}}">{{transitMessage.node|unpack}}</a><br>via <a href="{{path('graph_edge',{uuid:transitMessage.incoming_edge|unpack})}}">{{transitMessage.incoming_edge|unpack}}</a></td>
+						<td>{{ transitMessage.current_load }}/{{ transitMessage.max_load }}</td>
+						<td><progress value="{{timestep - transitMessage.transmitted_at}}" max="{{transitMessage.delay}}"></progress></td>
 						<td>{{transitMessage.signal|unpack}}</td>
 						
 						<td>
