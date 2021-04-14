@@ -2,29 +2,29 @@
 
 {% block body %}
 	<section style="display: flex;">
-		<svg viewBox="0 0 1000 1000" width="500" height="700">
+		<svg viewBox="-500 -500 1000 1000" width="500" height="700">
 			{% for i, node in nodes %}
 				<a href="{{ path('graph_node', {uuid: node.uuid}) }}">
-				<circle cx="{{500 + 300 * node.positionX()}}" cy="{{500 + 300 * node.positionY()}}" r="20" stroke-width="1" stroke="cyan" /></a>
+				<circle cx="{{node.position.x}}" cy="{{node.position.y}}" r="20" stroke-width="1" stroke="cyan" /></a>
 			{% endfor %}
 
 			{% for edge in edges %}
 				<a href="{{ path('graph_edge', {uuid: edge.uuid}) }}">
-				<polygon points="{{500 + 300 * edge.source.positionX()}} {{500 + 300 * edge.source.positionY()}} {{500 + 300 * edge.target.positionX()}} {{500 + 300 * edge.target.positionY()}}" stroke="black" stroke-width="1" />
+				<polygon points="{{edge.source.position.x}} {{edge.source.position.y}} {{edge.target.position.x}} {{edge.target.position.y}}" stroke="black" stroke-width="1" />
 				</a>
 			{% endfor %}
 
 
 
 			{% for signal in message.signals %}
-				<polygon points="{{500 + 300 * signal.edge.source.positionX()}} {{500 + 300 * signal.edge.source.positionY()}} {{500 + 300 * signal.edge.target.positionX()}} {{500 + 300 * signal.edge.target.positionY()}}" stroke="{{
-				{0:'blue',1:'green',2:'yellow',3:'trapped'}[signal.acknowledgment.state|default(0)]
+				<polygon points="{{signal.edge.source.position.x}} {{signal.edge.source.position.y}} {{signal.edge.target.position.x}} {{signal.edge.target.position.y}}" stroke="{{
+				{0:'blue',1:'green',2:'yellow',3:'red'}[signal.acknowledgment.state|default(0)]
 				}}" stroke-width="5" />
 			{% endfor %}
 
-			<circle cx="{{500 + 300 * message.sender.positionX()}}" cy="{{500 + 300 * message.sender.positionY()}}" r="30" fill="none" stroke-width="4" stroke="orange" />
+			<circle  cx="{{message.sender.position.x}}" cy="{{message.sender.position.y}}" r="30" fill="none" stroke-width="4" stroke="orange" />
 
-			<circle cx="{{500 + 300 * message.receiver.positionX()}}" cy="{{500 + 300 * message.receiver.positionY()}}" r="30" fill="none" stroke-width="4" stroke="magenta" />
+			<circle cx="{{message.receiver.position.x}}" cy="{{message.receiver.position.y}}" r="30" fill="none" stroke-width="4" stroke="magenta" />
 		</svg>
 
 		<div>
@@ -37,9 +37,9 @@
 				<dt>Created At</dt>
 				<dd>{{ message.createdAt }}</dd>
 				<dt>Sender</dt>
-				<dd>{{ message.sender.uuid }}</dd>
+				<dd><a href="{{ path('graph_node', {uuid: message.sender.uuid}) }}">{{ message.sender.uuid }}</a></dd>
 				<dt>Receiver</dt>
-				<dd>{{ message.receiver.uuid }}</dd>
+				<dd><a href="{{ path('graph_node', {uuid: message.receiver.uuid}) }}">{{ message.receiver.uuid }}</a></dd>
 			</dl>
 
 			<h2>Signals</h2>
@@ -66,6 +66,10 @@
 						<td>
 							{{ signal.acknowledgment ? signal.acknowledgment.state : '-' }}
 						</td>
+					</tr>
+				{% else %}
+					<tr>
+						<td colspan="6" align="center">No signals processed yet</td>
 					</tr>
 				{% endfor %}
 				

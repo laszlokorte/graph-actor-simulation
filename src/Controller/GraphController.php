@@ -17,6 +17,7 @@ use App\Form\Type\CreateMessageType;
 use App\Form\Type\CreateNodeMessageType;
 use App\Form\Type\CreateNodeEdgeType;
 use App\Form\Type\CreateTimestepType;
+use App\Form\Type\DeleteTimestepType;
 use App\Form\Type\GraphClearType;
 use App\Form\Type\SimulationResetType;
 use App\Form\Type\SimulationStepType;
@@ -191,6 +192,46 @@ class GraphController
         return new RedirectResponse($urlGenerator->generate('graph_index'));
     }
 
+    /**
+     * @Route("/edge/{uuid}/reverse", methods={"POST"}, name="graph_create_edge_reverse")
+     * @Template
+     */
+    public function createEdgeReverse(Request $request, NodeRepository $nodeRepo, FormFactoryInterface $formFactory, EdgeRepository $edgeRepo,UrlGeneratorInterface $urlGenerator, EntityManagerInterface  $entityManager, Entity\Edge $edge)
+    {
+        $reverse = $edgeRepo->findReverse($edge);
+
+        if($reverse) {
+            return new RedirectResponse($urlGenerator->generate('graph_edge',['uuid' => $reverse->getUuid()]));
+        } else {
+            $reverse = new Entity\Edge();
+            $reverse->setSource($edge->getTarget());
+            $reverse->setTarget($edge->getSource());
+
+
+            $entityManager->persist($reverse);
+            $entityManager->flush();
+        }
+        
+
+        return new RedirectResponse($urlGenerator->generate('graph_edge',['uuid' => $edge->getUuid()]));
+    }
+
+    /**
+     * @Route("/edges/reverse", methods={"POST"}, name="graph_create_edges_reverse_all")
+     * @Template
+     */
+    public function createEdgeReverseAll(Request $request, NodeRepository $nodeRepo, FormFactoryInterface $formFactory, EdgeRepository $edgeRepo,UrlGeneratorInterface $urlGenerator, EntityManagerInterface  $entityManager)
+    {
+        $connection = $entityManager->getConnection();
+
+        $timestepSQL = "INSERT INTO edge(uuid, source, target, delay) SELECT randomblob(16), edge.target, edge.source, edge.delay FROM edge LEFT JOIN edge rev ON rev.source = edge.target WHERE rev.uuid IS NULL";
+        $timestepStmt = $connection->prepare($timestepSQL);
+        $timestepStmt->execute();
+        
+
+        return new RedirectResponse($urlGenerator->generate('graph_index'));
+    }
+
 
     /**
      * @Route("/message", methods={"POST"}, name="graph_create_message")
@@ -285,7 +326,12 @@ class GraphController
             $connection = $entityManager->getConnection();
 
             $connection->beginTransaction();
+            $connection->exec("DELETE FROM acknowledgment");
+            $connection->exec("DELETE FROM signal");
+            $connection->exec("DELETE FROM message");
+            $connection->exec("DELETE FROM timestep");
             $connection->exec("DELETE FROM edge");
+            $connection->exec("DELETE FROM node_position");
             $connection->exec("DELETE FROM node");
             $connection->commit();
         }
@@ -346,6 +392,33 @@ class GraphController
     }
 
     /**
+     * @Route("/simulation/back", methods={"POST"}, name="simulation_back")
+     */
+    public function simulationBack(Request $request, NodeRepository $nodeRepo, FormFactoryInterface $formFactory, UrlGeneratorInterface $urlGenerator, EntityManagerInterface  $entityManager)
+    {
+        $form = $formFactory->create(DeleteTimestepType::class, new Entity\Message(), [
+            'action' => $urlGenerator->generate('simulation_back'),
+            'method' => 'POST',
+        ]);
+
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $connection = $entityManager->getConnection();
+            $connection->beginTransaction();
+
+            $connection->exec("DELETE FROM acknowledgment WHERE acked_at >= (SELECT MAX(time) FROM timestep)");
+            $connection->exec("DELETE FROM signal WHERE transmitted_at >= (SELECT MAX(time) FROM timestep)");
+            $connection->exec("DELETE FROM message WHERE created_at >= (SELECT MAX(time) FROM timestep)");
+            $connection->exec("DELETE FROM timestep WHERE time >= (SELECT MAX(time) FROM timestep)");
+            $connection->commit();
+        }
+
+
+        return new RedirectResponse($urlGenerator->generate('simulation_next'));
+    }
+
+    /**
      * @Route("/simulation/next", methods={"GET"}, name="simulation_next")
      * @Template
      */
@@ -373,6 +446,11 @@ class GraphController
         $transitMessagesStmt->execute();
         $transitMessages = $transitMessagesStmt->fetchAll();
 
+        $messageHealthSQL = "SELECT * FROM global_message_health";
+        $messageHealthStmt = $connection->prepare($messageHealthSQL);
+        $messageHealthStmt->execute();
+        $messageHealth = $messageHealthStmt->fetchAll();
+
 
 
         $pendingAcknowledgmentsSQL = "SELECT * FROM available_response";
@@ -386,6 +464,11 @@ class GraphController
         ]);
 
 
+        $backForm = $formFactory->create(DeleteTimestepType::class, new Entity\Message(), [
+            'action' => $urlGenerator->generate('simulation_back'),
+            'method' => 'POST',
+        ]);
+
 
         $simulationResetForm = $formFactory->create(SimulationResetType::class, null, [
             'action' => $urlGenerator->generate('simulation_reset'),
@@ -396,12 +479,14 @@ class GraphController
             'timestep' => $timestep,
             'nodes' => $nodeRepo->findAll(),
             'edges' => $edgeRepo->findAll(),
+            'messageHealth' => $messageHealth,
             'messages' => $messageRepo->findAll(),
             'newMessages' => $newMessages,
             'trappedMessages' => $trappedMessages,
             'transitMessages' => $transitMessages,
             'pendingAcknowledgments' => $pendingAcknowledgments,
             'timestepForm' =>  $form->createView(),
+            'backForm' =>  $backForm->createView(),
             'simulationResetForm' =>  $simulationResetForm->createView(),
         ];
 
@@ -472,7 +557,7 @@ class GraphController
 
         $timestepSQL = "INSERT INTO signal(uuid, message, edge, transmitted_at) 
             SELECT :uuid, message, outgoing_edge, time FROM available_redirect 
-            WHERE ready and current_load < max_load ORDER BY RANDOM() LIMIT 1";
+            WHERE ready and current_load < max_load AND NOT trapped ORDER BY RANDOM() LIMIT 1";
         $timestepStmt = $connection->prepare($timestepSQL);
         $timestepStmt->bindValue(':uuid', (new \Symfony\Component\Uid\UuidV4())->toBinary());
         $timestepStmt->execute();

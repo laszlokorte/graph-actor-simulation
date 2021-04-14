@@ -3,20 +3,20 @@
 {% block body %}
 
 	<div style="display: flex;">
-		<svg viewBox="0 0 1000 1000" width="500" height="700">
+		<svg viewBox="-500 -500 1000 1000" width="500" height="700">
 			{% for i, node in nodes %}
 				<a href="{{ path('graph_node', {uuid: node.uuid}) }}">
-				<circle title="{{ node.uuid }}" cx="{{500 + 300 * node.positionX()}}" cy="{{500 + 300 * node.positionY()}}" r="20" /></a>
+				<circle title="{{ node.uuid }}" cx="{{node.position.x}}" cy="{{node.position.y}}" r="20" /></a>
 			{% endfor %}
 
 			{% for edge in edges %}
 				<a href="{{ path('graph_edge', {uuid: edge.uuid}) }}">
-				<polygon points="{{500 + 300 * edge.source.positionX()}} {{500 + 300 * edge.source.positionY()}} {{500 + 300 * edge.target.positionX()}} {{500 + 300 * edge.target.positionY()}}" stroke="cyan" />
+				<polygon points="{{edge.source.position.x}} {{edge.source.position.y}} {{edge.target.position.x}} {{edge.target.position.y}}" stroke="cyan" />
 				</a>
 			{% endfor %}
 		</svg>
 		<div>
-						<h1>Network Overview</h1>
+		<h1>Network Overview</h1>
 
 		<section>
 			{{ form(graphClearForm) }}
@@ -36,6 +36,10 @@
 						<td><a href="{{ path('graph_node', {uuid: node.uuid}) }}">{{ node.uuid }}</a></td>
 						<td>{{ node.capacity }}</td>
 					</tr>
+					{% else %}
+						<tr>
+						<td colspan="2" align="center">No nodes created yet</td>
+					</tr>
 					{% endfor %}
 				</tbody>
 			</table>
@@ -43,8 +47,12 @@
 			{{ form(createNodeForm) }}
 
 
-
+			{% if nodes is not empty %}
 			<h2>Edges</h2>
+
+			<form action="{{ path('graph_create_edges_reverse_all') }}" method="post" accept-charset="utf-8">
+				<button>Symmetric closure</button>
+			</form>
 
 			<table width="100%">
 				<thead>
@@ -65,16 +73,22 @@
 
 						<td>{{ edge.delay }}</td>
 					</tr>
+					{% else %}
+						<tr>
+						<td colspan="4" align="center">No edges created yet</td>
+					</tr>
 				{% endfor %}
 				</tbody>
 			</table>
 
 			{{ form(createEdgeForm) }}
+			{% endif %}
 
+			{% if edges is not empty %}
 			<h2>Simulation</h2>
 
 	        <a href="{{ path('simulation_next') }}">Run Simulation</a>
-
+	    {% endif %}
 
 		</section>
 		</div>

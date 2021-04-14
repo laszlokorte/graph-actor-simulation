@@ -2,19 +2,19 @@
 
 {% block body %}
 	<section style="display: flex;">
-		<svg viewBox="0 0 1000 1000" width="500" height="700">
+		<svg viewBox="-500 -500 1000 1000" width="500" height="700">
 			{% for i, node in nodes %}
 				<a href="{{ path('graph_node', {uuid: node.uuid}) }}">
-				<circle cx="{{500 + 300 * node.positionX()}}" cy="{{500 + 300 * node.positionY()}}" r="20" stroke-width="1" stroke="cyan" /></a>
+				<circle  cx="{{node.position.x}}" cy="{{node.position.y}}" r="20" stroke-width="1" stroke="cyan" /></a>
 			{% endfor %}
 
 			{% for e in edges %}
 				<a href="{{ path('graph_edge', {uuid: e.uuid}) }}">
-				<polygon points="{{500 + 300 * e.source.positionX()}} {{500 + 300 * e.source.positionY()}} {{500 + 300 * e.target.positionX()}} {{500 + 300 * e.target.positionY()}}" stroke="black" stroke-width="1" />
+				<polygon points="{{e.source.position.x}} {{e.source.position.y}} {{e.target.position.x}} {{e.target.position.y}}" stroke="black" stroke-width="1" />
 				</a>
 			{% endfor %}
 
-			<polygon points="{{500 + 300 * edge.source.positionX()}} {{500 + 300 * edge.source.positionY()}} {{500 + 300 * edge.target.positionX()}} {{500 + 300 * edge.target.positionY()}}" stroke="cyan" stroke-width="3" />
+			<polygon points="{{edge.source.position.x}} {{edge.source.position.y}} {{edge.target.position.x}} {{edge.target.position.y}}" stroke="cyan" stroke-width="3" />
 		</svg>
 
 		<div>
@@ -35,7 +35,9 @@
 				{% if reverse is not null %}
 				<a href="{{ path('graph_edge', {uuid: reverse.uuid}) }}">{{reverse.uuid}}</a>
 				{% else %}
-					none
+					<form action="{{ path('graph_create_edge_reverse', {uuid: edge.uuid})}}" method="post" accept-charset="utf-8">
+						<button>Create</button>
+					</form>
 				{% endif %}
 				</dd>
 			</dl>

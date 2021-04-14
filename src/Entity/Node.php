@@ -45,6 +45,16 @@ class Node
      */
     private $incomingMessages;
 
+    /**
+     * @ORM\OneToOne(targetEntity="App\Entity\NodePosition", mappedBy="node", cascade={"persist", "remove"})
+     */
+    private $position;
+
+    public function __construct() {
+        $this->position = new NodePosition(rand(-200, 200), rand(-200, 200));
+        $this->position->setNode($this);
+    }
+
     public function getUuid(): ?string
     {
         return $this->uuid;
@@ -75,11 +85,8 @@ class Node
         return $this->capacity;
     }
 
-    public function getPositionX() {
-        return sin(pow(base_convert(sha1($this->uuid), 16, 10), 0.9));
-    }
-
-    public function getPositionY() {
-        return cos(pow(base_convert(sha1($this->uuid), 16, 10), 0.9));
+    public function getPosition()
+    {
+        return $this->position ?? new NodePosition();
     }
 }

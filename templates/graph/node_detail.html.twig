@@ -2,19 +2,19 @@
 
 {% block body %}
 	<section style="display: flex;">
-		<svg viewBox="0 0 1000 1000" width="500" height="700">
+		<svg viewBox="-500 -500 1000 1000" width="500" height="700">
 			{% for i, n in nodes %}
 				<a href="{{ path('graph_node', {uuid: n.uuid}) }}">
-				<circle cx="{{500 + 300 * n.positionX()}}" cy="{{500 + 300 * n.positionY()}}" r="20" stroke="black" /></a>
+				<circle cx="{{n.position.x}}" cy="{{n.position.y}}" r="20" stroke="black" /></a>
 			{% endfor %}
 
 			{% for e in edges %}
 				<a href="{{ path('graph_edge', {uuid: e.uuid}) }}">
-				<polygon points="{{500 + 300 * e.source.positionX()}} {{500 + 300 * e.source.positionY()}} {{500 + 300 * e.target.positionX()}} {{500 + 300 * e.target.positionY()}}" stroke="black" stroke-width="1" />
+				<polygon points="{{e.source.position.x}} {{e.source.position.y}} {{e.target.position.x}} {{e.target.position.y}}" stroke="black" stroke-width="1" />
 				</a>
 			{% endfor %}
 
-			<circle cx="{{500 + 300 * node.positionX()}}" cy="{{500 + 300 * node.positionY()}}" r="20" stroke-width="5" fill="none" stroke="cyan" />
+			<circle cx="{{node.position.x}}" cy="{{node.position.y}}" r="20" stroke-width="5" fill="none" stroke="cyan" />
 		</svg>
 
 		<div>
